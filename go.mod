@@ -9,6 +9,8 @@ require (
 	github.com/stretchr/testify v1.8.2
 )
 
+replace github.com/mlange-42/arche v0.9.1-0.20240110172558-5d8643da824f => ../arche
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

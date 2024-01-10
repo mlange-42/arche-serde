@@ -9,6 +9,8 @@ import (
 	"github.com/mlange-42/arche/ecs"
 )
 
+const entityTag = "this.Entity"
+
 // Serialize an Arche ECS world to JSON.
 func Serialize(world *ecs.World) ([]byte, error) {
 	builder := strings.Builder{}
@@ -33,6 +35,7 @@ func Serialize(world *ecs.World) ([]byte, error) {
 	}
 
 	builder.WriteString("],\n\"Entities\" : [\n")
+
 	query := world.Query(ecs.All())
 	lastEntity := query.Count() - 1
 	counter = 0
@@ -41,6 +44,18 @@ func Serialize(world *ecs.World) ([]byte, error) {
 
 		ids := query.Ids()
 		last := len(ids) - 1
+
+		jsonData, err := json.Marshal(query.Entity())
+		if err != nil {
+			return nil, err
+		}
+		builder.WriteString(fmt.Sprintf("    \"%s\" : ", entityTag))
+		builder.WriteString(string(jsonData))
+		if last >= 0 {
+			builder.WriteString(",")
+		}
+		builder.WriteString("\n")
+
 		for i, id := range ids {
 			tp, _ := ecs.ComponentType(world, id)
 
@@ -50,8 +65,7 @@ func Serialize(world *ecs.World) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			builder.WriteString("    ")
-			builder.WriteString(fmt.Sprintf("\"%s\" : ", tp.String()))
+			builder.WriteString(fmt.Sprintf("    \"%s\" : ", tp.String()))
 			builder.WriteString(string(jsonData))
 			if i < last {
 				builder.WriteString(",")

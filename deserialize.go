@@ -51,8 +51,16 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 			return err
 		}
 
+		e := entity{}
 		components := []ecs.Component{}
 		for tpName, value := range mp {
+			if tpName == entityTag {
+				if err := json.Unmarshal(value.Bytes, &e); err != nil {
+					return err
+				}
+				continue
+			}
+
 			id := ids[tpName]
 			tp := types[id]
 

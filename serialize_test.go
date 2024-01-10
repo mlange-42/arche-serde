@@ -19,14 +19,23 @@ type Velocity struct {
 	Y float64
 }
 
+type Parent struct {
+	Entity ecs.Entity
+}
+
 func TestSerialize(t *testing.T) {
 	w := ecs.NewWorld()
 
 	posId := ecs.ComponentID[Position](&w)
 	velId := ecs.ComponentID[Velocity](&w)
+	parId := ecs.ComponentID[Parent](&w)
 
-	_ = w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
-	_ = w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 3, Y: 4}}, ecs.Component{ID: velId, Comp: &Velocity{X: 5, Y: 6}})
+	p := w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
+	_ = w.NewEntityWith(
+		ecs.Component{ID: posId, Comp: &Position{X: 3, Y: 4}},
+		ecs.Component{ID: velId, Comp: &Velocity{X: 5, Y: 6}},
+		ecs.Component{ID: parId, Comp: &Parent{Entity: p}},
+	)
 
 	resId := ecs.ResourceID[Velocity](&w)
 	w.Resources().Add(resId, &Velocity{X: 1000, Y: 0})
@@ -42,6 +51,7 @@ func TestSerialize(t *testing.T) {
 	w = ecs.NewWorld()
 	posId = ecs.ComponentID[Position](&w)
 	velId = ecs.ComponentID[Velocity](&w)
+	parId = ecs.ComponentID[Parent](&w)
 	_ = ecs.AddResource[Velocity](&w, &Velocity{})
 
 	err = archeserde.Deserialize(jsonData, &w)
