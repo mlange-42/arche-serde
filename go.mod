@@ -3,9 +3,11 @@ module github.com/mlange-42/arche-serde
 go 1.21.3
 
 require (
-	github.com/mlange-42/arche v0.9.1-0.20240109163759-4c0b1b320ddb
+	github.com/mlange-42/arche v0.9.0
 	github.com/stretchr/testify v1.8.2
 )
+
+replace github.com/mlange-42/arche v0.9.0 => ../arche
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
