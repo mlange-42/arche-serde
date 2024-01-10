@@ -38,29 +38,32 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 		return err
 	}
 
-	for _, tp := range deserial.Components {
+	if err := world.UnmarshalEntities(deserial.World.Bytes); err != nil {
+		return err
+	}
+
+	for _, tp := range deserial.Types {
 		if _, ok := ids[tp]; !ok {
 			return fmt.Errorf("component type is not registered: %s", tp)
 		}
 	}
 
-	for _, e := range deserial.Entities {
+	entityMap := map[ecs.Entity]int{}
+	for idx, entity := range deserial.Entities {
+		entityMap[entity] = idx
+	}
+
+	for i, comps := range deserial.Components {
+		entity := deserial.Entities[i]
+
 		mp := map[string]entry{}
 
-		if err := json.Unmarshal(e.Bytes, &mp); err != nil {
+		if err := json.Unmarshal(comps.Bytes, &mp); err != nil {
 			return err
 		}
 
-		e := entity{}
 		components := []ecs.Component{}
 		for tpName, value := range mp {
-			if tpName == entityTag {
-				if err := json.Unmarshal(value.Bytes, &e); err != nil {
-					return err
-				}
-				continue
-			}
-
 			id := ids[tpName]
 			tp := types[id]
 
@@ -73,7 +76,7 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 				Comp: component,
 			})
 		}
-		_ = world.NewEntityWith(components...)
+		world.Assign(entity, components...)
 	}
 
 	for tpName, res := range deserial.Resources {

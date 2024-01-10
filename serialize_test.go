@@ -30,11 +30,11 @@ func TestSerialize(t *testing.T) {
 	velId := ecs.ComponentID[Velocity](&w)
 	parId := ecs.ComponentID[Parent](&w)
 
-	p := w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
-	_ = w.NewEntityWith(
+	parent := w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
+	child := w.NewEntityWith(
 		ecs.Component{ID: posId, Comp: &Position{X: 3, Y: 4}},
 		ecs.Component{ID: velId, Comp: &Velocity{X: 5, Y: 6}},
-		ecs.Component{ID: parId, Comp: &Parent{Entity: p}},
+		ecs.Component{ID: parId, Comp: &Parent{Entity: parent}},
 	)
 
 	resId := ecs.ResourceID[Velocity](&w)
@@ -73,8 +73,12 @@ func TestSerialize(t *testing.T) {
 	assert.True(t, query.Has(velId))
 	assert.Equal(t, *(*Position)(query.Get(posId)), Position{X: 3, Y: 4})
 	assert.Equal(t, *(*Velocity)(query.Get(velId)), Velocity{X: 5, Y: 6})
+	assert.Equal(t, *(*Parent)(query.Get(parId)), Parent{Entity: parent})
 
 	res := (*Velocity)(ecs.GetResource[Velocity](&w))
 
 	assert.Equal(t, *res, Velocity{X: 1000})
+
+	assert.True(t, w.Alive(parent))
+	assert.True(t, w.Alive(child))
 }
