@@ -12,6 +12,8 @@
 ## Features
 
 * Serialize/deserialize an entire world in one line.
+* Currently only supports plain components and resources.  
+Entities that are stored in components can currently not be deserialized properly.
 
 ## Installation
 
