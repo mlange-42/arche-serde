@@ -42,7 +42,7 @@ func TestSerialize(t *testing.T) {
 	w = ecs.NewWorld()
 	posId = ecs.ComponentID[Position](&w)
 	velId = ecs.ComponentID[Velocity](&w)
-	resId = ecs.AddResource[Velocity](&w, &Velocity{})
+	_ = ecs.AddResource[Velocity](&w, &Velocity{})
 
 	err = archeserde.Deserialize(jsonData, &w)
 	if err != nil {

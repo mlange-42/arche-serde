@@ -40,7 +40,7 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 
 	for _, tp := range deserial.Components {
 		if _, ok := ids[tp]; !ok {
-			return fmt.Errorf("Component type is not registered: %s", tp)
+			return fmt.Errorf("component type is not registered: %s", tp)
 		}
 	}
 
@@ -71,7 +71,7 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 	for tpName, res := range deserial.Resources {
 		resID, ok := resIds[tpName]
 		if !ok {
-			return fmt.Errorf("Resource type is not registered: %s", tpName)
+			return fmt.Errorf("resource type is not registered: %s", tpName)
 		}
 
 		tp := resTypes[resID]
@@ -82,7 +82,7 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 
 		resLoc := world.Resources().Get(resID)
 		if resLoc == nil {
-			return fmt.Errorf("Resource type registered but nil: %s", tpName)
+			return fmt.Errorf("resource type registered but nil: %s", tpName)
 		}
 
 		rValue := reflect.ValueOf(resLoc)
