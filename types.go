@@ -1,8 +1,11 @@
 package archeserde
 
+import "github.com/mlange-42/arche/ecs"
+
 type deserializer struct {
-	Components []string
-	Entities   []entry
+	World      ecs.EntityData
+	Types      []string
+	Components []entry
 	Resources  map[string]entry
 }
 
@@ -13,8 +16,4 @@ type entry struct {
 func (e *entry) UnmarshalJSON(jsonData []byte) error {
 	e.Bytes = jsonData
 	return nil
-}
-
-func (e *entry) String() string {
-	return string(e.Bytes)
 }
