@@ -11,10 +11,16 @@ import (
 // Deserialize an Arche [ecs.World] from JSON.
 //
 // The world must be prepared the following way:
+//   - The world must not contain any alive or dead entities (i.e. a new or [ecs.World.Reset] world)
 //   - All required component types must be registered using [ecs.ComponentID]
-//   - All required resources must be added using [ecs.AddResource]
+//   - All required resources must be added as dummies using [ecs.AddResource]
+//
+// # Query iteration order
 //
 // After deserialization, it is not guaranteed that entity iteration order in queries is the same as before.
+// More precisely, it should at first be the same as before, but will likely deviate over time from what would
+// happen when continuing the original, serialized run. Multiple worlds deserialized from the same source should,
+// however, behave exactly the same.
 func Deserialize(jsonData []byte, world *ecs.World) error {
 	deserial := deserializer{}
 	if err := json.Unmarshal(jsonData, &deserial); err != nil {
@@ -85,10 +91,12 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 				Comp: component,
 			})
 		}
-
-		world.Assign(entity, components...)
-		if !target.IsZero() {
-			world.Relations().Set(entity, targetComp, target)
+		builder := ecs.NewBuilderWith(world, components...)
+		if target.IsZero() {
+			builder.Add(entity)
+		} else {
+			builder = builder.WithRelation(targetComp)
+			builder.Add(entity, target)
 		}
 	}
 	return nil

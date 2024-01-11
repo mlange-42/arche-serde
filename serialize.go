@@ -11,7 +11,14 @@ import (
 
 const targetTag = "arche.relation.Target"
 
-// Serialize an Arche ECS world to JSON.
+// Serialize an Arche [ecs.World] to JSON.
+//
+// Serializes the following:
+//   - Entities and the entity pool
+//   - All components of all entities
+//   - All resources
+//
+// All components and resources must be "JSON-able" with [encoding/json].
 func Serialize(world *ecs.World) ([]byte, error) {
 	builder := strings.Builder{}
 
