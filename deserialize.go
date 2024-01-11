@@ -14,12 +14,12 @@ import (
 //   - All required component types must be registered using [ecs.ComponentID]
 //   - All required resources must be added using [ecs.AddResource]
 func Deserialize(jsonData []byte, world *ecs.World) error {
-	types := map[ecs.ID]reflect.Type{}
+	infos := map[ecs.ID]ecs.CompInfo{}
 	ids := map[string]ecs.ID{}
 	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if tp, ok := ecs.ComponentType(world, ecs.ID(i)); ok {
-			types[ecs.ID(i)] = tp
-			ids[tp.String()] = ecs.ID(i)
+		if info, ok := ecs.ComponentInfo(world, ecs.ID(i)); ok {
+			infos[ecs.ID(i)] = info
+			ids[info.Type.String()] = ecs.ID(i)
 		}
 	}
 
@@ -62,12 +62,25 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 			return err
 		}
 
+		target := ecs.Entity{}
+		var targetComp ecs.ID
 		components := []ecs.Component{}
 		for tpName, value := range mp {
-			id := ids[tpName]
-			tp := types[id]
+			if tpName == targetTag {
+				if err := json.Unmarshal(value.Bytes, &target); err != nil {
+					return err
+				}
+				continue
+			}
 
-			component := reflect.New(tp).Interface()
+			id := ids[tpName]
+			info := infos[id]
+
+			if info.IsRelation {
+				targetComp = id
+			}
+
+			component := reflect.New(info.Type).Interface()
 			if err := json.Unmarshal(value.Bytes, &component); err != nil {
 				return err
 			}
@@ -76,7 +89,11 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 				Comp: component,
 			})
 		}
+
 		world.Assign(entity, components...)
+		if !target.IsZero() {
+			world.Relations().Set(entity, targetComp, target)
+		}
 	}
 
 	for tpName, res := range deserial.Resources {

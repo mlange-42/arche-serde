@@ -9,6 +9,8 @@ import (
 	"github.com/mlange-42/arche/ecs"
 )
 
+const targetTag = "arche.relation.Target"
+
 // Serialize an Arche ECS world to JSON.
 func Serialize(world *ecs.World) ([]byte, error) {
 	builder := strings.Builder{}
@@ -55,8 +57,8 @@ func serializeTypes(world *ecs.World, builder *strings.Builder) {
 
 	types := map[ecs.ID]reflect.Type{}
 	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if tp, ok := ecs.ComponentType(world, ecs.ID(i)); ok {
-			types[ecs.ID(i)] = tp
+		if info, ok := ecs.ComponentInfo(world, ecs.ID(i)); ok {
+			types[ecs.ID(i)] = info.Type
 		}
 	}
 	maxComp := len(types) - 1
@@ -112,15 +114,20 @@ func serializeComponents(world *ecs.World, builder *strings.Builder) error {
 		last := len(ids) - 1
 
 		for i, id := range ids {
-			tp, _ := ecs.ComponentType(world, id)
+			info, _ := ecs.ComponentInfo(world, id)
+
+			if info.IsRelation {
+				target := query.Relation(id)
+				builder.WriteString(fmt.Sprintf("    \"%s\" : {\"ID\": %d, \"Gen\": %d},\n", targetTag, target.ID(), target.Gen()))
+			}
 
 			comp := query.Get(id)
-			value := reflect.NewAt(tp, comp).Interface()
+			value := reflect.NewAt(info.Type, comp).Interface()
 			jsonData, err := json.Marshal(value)
 			if err != nil {
 				return err
 			}
-			builder.WriteString(fmt.Sprintf("    \"%s\" : ", tp.String()))
+			builder.WriteString(fmt.Sprintf("    \"%s\" : ", info.Type.String()))
 			builder.WriteString(string(jsonData))
 			if i < last {
 				builder.WriteString(",")
