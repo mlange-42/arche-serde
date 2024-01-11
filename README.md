@@ -11,9 +11,8 @@
 
 ## Features
 
-* Serialize/deserialize an entire world in one line.
-* Currently only supports plain components and resources.  
-Entities that are stored in components can currently not be deserialized properly.
+* Serialize/deserialize an entire *Arche* world in one line.
+* Proper serialization of entity relations, as well as of entities stored in components.
 
 ## Installation
 

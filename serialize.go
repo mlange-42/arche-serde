@@ -44,7 +44,12 @@ func Serialize(world *ecs.World) ([]byte, error) {
 }
 
 func serializeWorld(world *ecs.World, builder *strings.Builder) error {
-	jsonData, err := world.MarshalEntities()
+	entities := world.GetEntityData()
+
+	jsonData, err := json.Marshal(entities)
+	if err != nil {
+		return err
+	}
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,7 @@ package archeserde
 import "github.com/mlange-42/arche/ecs"
 
 type deserializer struct {
-	World      entry
+	World      ecs.EntityData
 	Types      []string
 	Entities   []ecs.Entity
 	Components []entry

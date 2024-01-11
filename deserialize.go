@@ -13,6 +13,8 @@ import (
 // The world must be prepared the following way:
 //   - All required component types must be registered using [ecs.ComponentID]
 //   - All required resources must be added using [ecs.AddResource]
+//
+// After deserialization, it is not guaranteed that entity iteration order in queries is the same as before.
 func Deserialize(jsonData []byte, world *ecs.World) error {
 	infos := map[ecs.ID]ecs.CompInfo{}
 	ids := map[string]ecs.ID{}
@@ -38,19 +40,12 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 		return err
 	}
 
-	if err := world.UnmarshalEntities(deserial.World.Bytes); err != nil {
-		return err
-	}
+	world.SetEntityData(&deserial.World)
 
 	for _, tp := range deserial.Types {
 		if _, ok := ids[tp]; !ok {
 			return fmt.Errorf("component type is not registered: %s", tp)
 		}
-	}
-
-	entityMap := map[ecs.Entity]int{}
-	for idx, entity := range deserial.Entities {
-		entityMap[entity] = idx
 	}
 
 	for i, comps := range deserial.Components {

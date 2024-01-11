@@ -110,6 +110,7 @@ func TestSerializeRelation(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "could not serialize: %s\n", err)
 	}
+	fmt.Println(string(jsonData))
 
 	w = ecs.NewWorld()
 	_ = ecs.ComponentID[Position](&w)
