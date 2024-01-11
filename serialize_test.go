@@ -112,7 +112,7 @@ func TestSerializeRelation(t *testing.T) {
 	}
 
 	w = ecs.NewWorld()
-	posId = ecs.ComponentID[Position](&w)
+	_ = ecs.ComponentID[Position](&w)
 	relId = ecs.ComponentID[ChildRelation](&w)
 
 	err = archeserde.Deserialize(jsonData, &w)
