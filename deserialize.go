@@ -15,6 +15,8 @@ import (
 //   - All required resources must be added using [ecs.AddResource]
 //
 // After deserialization, it is not guaranteed that entity iteration order in queries is the same as before.
+// More precisely, it should at first be the same as before, but will likely deviate over time from what would
+// happen when continuing the original, serialized run.
 func Deserialize(jsonData []byte, world *ecs.World) error {
 	deserial := deserializer{}
 	if err := json.Unmarshal(jsonData, &deserial); err != nil {
