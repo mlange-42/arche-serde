@@ -43,7 +43,9 @@ func TestSerialize(t *testing.T) {
 	)
 
 	resId := ecs.ResourceID[Velocity](&w)
+	resId2 := ecs.ResourceID[Position](&w)
 	w.Resources().Add(resId, &Velocity{X: 1000, Y: 0})
+	w.Resources().Add(resId2, &Position{X: 1000, Y: 0})
 
 	jsonData, err := archeserde.Serialize(&w)
 
@@ -57,6 +59,7 @@ func TestSerialize(t *testing.T) {
 	posId = ecs.ComponentID[Position](&w)
 	velId = ecs.ComponentID[Velocity](&w)
 	childId = ecs.ComponentID[ChildOf](&w)
+	_ = ecs.AddResource[Position](&w, &Position{})
 	_ = ecs.AddResource[Velocity](&w, &Velocity{})
 
 	err = archeserde.Deserialize(jsonData, &w)

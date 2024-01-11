@@ -184,6 +184,7 @@ func serializeResources(world *ecs.World, builder *strings.Builder) error {
 			builder.WriteString(",")
 		}
 		builder.WriteString("\n")
+		counter++
 	}
 
 	builder.WriteString("}")
