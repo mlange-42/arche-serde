@@ -85,10 +85,12 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 				Comp: component,
 			})
 		}
-
-		world.Assign(entity, components...)
-		if !target.IsZero() {
-			world.Relations().Set(entity, targetComp, target)
+		builder := ecs.NewBuilderWith(world, components...)
+		if target.IsZero() {
+			builder.Add(entity)
+		} else {
+			builder = builder.WithRelation(targetComp)
+			builder.Add(entity, target)
 		}
 	}
 	return nil
