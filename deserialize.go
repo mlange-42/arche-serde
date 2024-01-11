@@ -50,7 +50,7 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 	}
 
 	for i, comps := range deserial.Components {
-		entity := deserial.Entities[i]
+		entity := deserial.World.Entities[deserial.World.Alive[i]]
 
 		mp := map[string]entry{}
 

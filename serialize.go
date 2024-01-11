@@ -25,11 +25,6 @@ func Serialize(world *ecs.World) ([]byte, error) {
 	serializeTypes(world, &builder)
 	builder.WriteString(",\n")
 
-	if err := serializeEntities(world, &builder); err != nil {
-		return nil, err
-	}
-	builder.WriteString(",\n")
-
 	if err := serializeComponents(world, &builder); err != nil {
 		return nil, err
 	}
@@ -80,31 +75,6 @@ func serializeTypes(world *ecs.World, builder *strings.Builder) {
 	builder.WriteString("]")
 }
 
-func serializeEntities(world *ecs.World, builder *strings.Builder) error {
-
-	builder.WriteString("\"Entities\" : [\n")
-
-	query := world.Query(ecs.All())
-	lastEntity := query.Count() - 1
-	counter := 0
-	for query.Next() {
-		jsonData, err := json.Marshal(query.Entity())
-		if err != nil {
-			return err
-		}
-		builder.WriteString(fmt.Sprintf("    %s", jsonData))
-		if counter < lastEntity {
-			builder.WriteString(",")
-		}
-		builder.WriteString("\n")
-
-		counter++
-	}
-	builder.WriteString("]")
-
-	return nil
-}
-
 func serializeComponents(world *ecs.World, builder *strings.Builder) error {
 
 	builder.WriteString("\"Components\" : [\n")
@@ -123,7 +93,7 @@ func serializeComponents(world *ecs.World, builder *strings.Builder) error {
 
 			if info.IsRelation {
 				target := query.Relation(id)
-				builder.WriteString(fmt.Sprintf("    \"%s\" : {\"ID\": %d, \"Gen\": %d},\n", targetTag, target.ID(), target.Gen()))
+				builder.WriteString(fmt.Sprintf("    \"%s\" : [%d,%d],\n", targetTag, target.ID(), target.Gen()))
 			}
 
 			comp := query.Get(id)

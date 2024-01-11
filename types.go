@@ -5,7 +5,6 @@ import "github.com/mlange-42/arche/ecs"
 type deserializer struct {
 	World      ecs.EntityData
 	Types      []string
-	Entities   []ecs.Entity
 	Components []entry
 	Resources  map[string]entry
 }
