@@ -16,6 +16,24 @@ import (
 //
 // After deserialization, it is not guaranteed that entity iteration order in queries is the same as before.
 func Deserialize(jsonData []byte, world *ecs.World) error {
+	deserial := deserializer{}
+	if err := json.Unmarshal(jsonData, &deserial); err != nil {
+		return err
+	}
+
+	world.SetEntityData(&deserial.World)
+
+	if err := deserializeComponents(world, &deserial); err != nil {
+		return err
+	}
+	if err := deserializeResources(world, &deserial); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 	infos := map[ecs.ID]ecs.CompInfo{}
 	ids := map[string]ecs.ID{}
 	for i := 0; i < ecs.MaskTotalBits; i++ {
@@ -24,23 +42,6 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 			ids[info.Type.String()] = ecs.ID(i)
 		}
 	}
-
-	resTypes := map[ecs.ResID]reflect.Type{}
-	resIds := map[string]ecs.ResID{}
-	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if tp, ok := ecs.ResourceType(world, ecs.ResID(i)); ok {
-			resTypes[ecs.ResID(i)] = tp
-			resIds[tp.String()] = ecs.ResID(i)
-		}
-	}
-
-	deserial := deserializer{}
-
-	if err := json.Unmarshal(jsonData, &deserial); err != nil {
-		return err
-	}
-
-	world.SetEntityData(&deserial.World)
 
 	for _, tp := range deserial.Types {
 		if _, ok := ids[tp]; !ok {
@@ -90,6 +91,18 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 			world.Relations().Set(entity, targetComp, target)
 		}
 	}
+	return nil
+}
+
+func deserializeResources(world *ecs.World, deserial *deserializer) error {
+	resTypes := map[ecs.ResID]reflect.Type{}
+	resIds := map[string]ecs.ResID{}
+	for i := 0; i < ecs.MaskTotalBits; i++ {
+		if tp, ok := ecs.ResourceType(world, ecs.ResID(i)); ok {
+			resTypes[ecs.ResID(i)] = tp
+			resIds[tp.String()] = ecs.ResID(i)
+		}
+	}
 
 	for tpName, res := range deserial.Resources {
 		resID, ok := resIds[tpName]
@@ -116,6 +129,5 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 			return err
 		}
 	}
-
 	return nil
 }
