@@ -27,7 +27,7 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 		return err
 	}
 
-	world.SetEntityData(&deserial.World)
+	world.LoadEntities(&deserial.World)
 
 	if err := deserializeComponents(world, &deserial); err != nil {
 		return err
