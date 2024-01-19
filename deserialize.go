@@ -42,10 +42,11 @@ func Deserialize(jsonData []byte, world *ecs.World) error {
 func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 	infos := map[ecs.ID]ecs.CompInfo{}
 	ids := map[string]ecs.ID{}
-	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if info, ok := ecs.ComponentInfo(world, ecs.ID(i)); ok {
-			infos[ecs.ID(i)] = info
-			ids[info.Type.String()] = ecs.ID(i)
+	allComps := ecs.ComponentIDs(world)
+	for _, id := range allComps {
+		if info, ok := ecs.ComponentInfo(world, id); ok {
+			infos[id] = info
+			ids[info.Type.String()] = id
 		}
 	}
 
@@ -105,10 +106,11 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 func deserializeResources(world *ecs.World, deserial *deserializer) error {
 	resTypes := map[ecs.ResID]reflect.Type{}
 	resIds := map[string]ecs.ResID{}
-	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if tp, ok := ecs.ResourceType(world, ecs.ResID(i)); ok {
-			resTypes[ecs.ResID(i)] = tp
-			resIds[tp.String()] = ecs.ResID(i)
+	allRes := ecs.ResourceIDs(world)
+	for _, id := range allRes {
+		if tp, ok := ecs.ResourceType(world, id); ok {
+			resTypes[id] = tp
+			resIds[tp.String()] = id
 		}
 	}
 

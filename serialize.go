@@ -52,9 +52,6 @@ func serializeWorld(world *ecs.World, builder *strings.Builder) error {
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
 	builder.WriteString(fmt.Sprintf("\"World\" : %s", string(jsonData)))
 	return nil
 }
@@ -63,9 +60,11 @@ func serializeTypes(world *ecs.World, builder *strings.Builder) {
 	builder.WriteString("\"Types\" : [\n")
 
 	types := map[ecs.ID]reflect.Type{}
-	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if info, ok := ecs.ComponentInfo(world, ecs.ID(i)); ok {
-			types[ecs.ID(i)] = info.Type
+
+	allComps := ecs.ComponentIDs(world)
+	for _, id := range allComps {
+		if info, ok := ecs.ComponentInfo(world, id); ok {
+			types[id] = info.Type
 		}
 	}
 	maxComp := len(types) - 1
@@ -100,7 +99,11 @@ func serializeComponents(world *ecs.World, builder *strings.Builder) error {
 
 			if info.IsRelation {
 				target := query.Relation(id)
-				builder.WriteString(fmt.Sprintf("    \"%s\" : [%d,%d],\n", targetTag, target.ID(), target.Gen()))
+				eJSON, err := target.MarshalJSON()
+				if err != nil {
+					return err
+				}
+				builder.WriteString(fmt.Sprintf("    \"%s\" : %s,\n", targetTag, eJSON))
 			}
 
 			comp := query.Get(id)
@@ -134,9 +137,10 @@ func serializeResources(world *ecs.World, builder *strings.Builder) error {
 	builder.WriteString("\"Resources\" : {\n")
 
 	resTypes := map[ecs.ResID]reflect.Type{}
-	for i := 0; i < ecs.MaskTotalBits; i++ {
-		if tp, ok := ecs.ResourceType(world, ecs.ResID(i)); ok {
-			resTypes[ecs.ResID(i)] = tp
+	allRes := ecs.ResourceIDs(world)
+	for _, id := range allRes {
+		if tp, ok := ecs.ResourceType(world, id); ok {
+			resTypes[id] = tp
 		}
 	}
 
