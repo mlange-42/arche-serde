@@ -56,6 +56,10 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 		}
 	}
 
+	if len(deserial.Components) != len(deserial.World.Alive) {
+		return fmt.Errorf("found components for %d entities, but world has %d alive entities", len(deserial.Components), len(deserial.World.Alive))
+	}
+
 	for i, comps := range deserial.Components {
 		entity := deserial.World.Entities[deserial.World.Alive[i]]
 
@@ -119,20 +123,14 @@ func deserializeResources(world *ecs.World, deserial *deserializer) error {
 		if !ok {
 			return fmt.Errorf("resource type is not registered: %s", tpName)
 		}
-
 		tp := resTypes[resID]
-		resource := reflect.New(tp).Interface()
-		if err := json.Unmarshal(res.Bytes, &resource); err != nil {
-			return err
-		}
 
 		resLoc := world.Resources().Get(resID)
 		if resLoc == nil {
 			return fmt.Errorf("resource type registered but nil: %s", tpName)
 		}
 
-		rValue := reflect.ValueOf(resLoc)
-		ptr := rValue.UnsafePointer()
+		ptr := reflect.ValueOf(resLoc).UnsafePointer()
 		value := reflect.NewAt(tp, ptr).Interface()
 
 		if err := json.Unmarshal(res.Bytes, &value); err != nil {
