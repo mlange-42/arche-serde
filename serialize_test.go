@@ -6,6 +6,7 @@ import (
 
 	archeserde "github.com/mlange-42/arche-serde"
 	"github.com/mlange-42/arche/ecs"
+	"github.com/mlange-42/arche/generic"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,6 +27,10 @@ type ChildOf struct {
 type ChildRelation struct {
 	ecs.Relation
 	Dummy int
+}
+
+type Generic[T any] struct {
+	Value T
 }
 
 func TestSerialize(t *testing.T) {
@@ -126,4 +131,53 @@ func TestSerializeRelation(t *testing.T) {
 
 	assert.Equal(t, w.Relations().Get(child1, relId), ecs.Entity{})
 	assert.Equal(t, w.Relations().Get(child2, relId), parent)
+}
+
+func TestSerializeGeneric(t *testing.T) {
+	w := ecs.NewWorld()
+
+	gen1Id := ecs.ComponentID[Generic[int32]](&w)
+	gen2Id := ecs.ComponentID[Generic[float32]](&w)
+
+	e1 := w.NewEntityWith(
+		ecs.Component{ID: gen1Id, Comp: &Generic[int32]{Value: 1}},
+	)
+	e2 := w.NewEntityWith(
+		ecs.Component{ID: gen2Id, Comp: &Generic[float32]{Value: 2.0}},
+	)
+	e3 := w.NewEntityWith(
+		ecs.Component{ID: gen1Id, Comp: &Generic[int32]{Value: 3}},
+		ecs.Component{ID: gen2Id, Comp: &Generic[float32]{Value: 4.0}},
+	)
+
+	jsonData, err := archeserde.Serialize(&w)
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+	fmt.Println(string(jsonData))
+
+	w = ecs.NewWorld()
+	_ = ecs.ComponentID[Generic[int32]](&w)
+	_ = ecs.ComponentID[Generic[float32]](&w)
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+
+	mapper := generic.NewMap2[Generic[int32], Generic[float32]](&w)
+
+	c1, c2 := mapper.Get(e1)
+	assert.Equal(t, c1, &Generic[int32]{Value: 1})
+	assert.Equal(t, c2, (*Generic[float32])(nil))
+
+	c1, c2 = mapper.Get(e2)
+	assert.Equal(t, c1, (*Generic[int32])(nil))
+	assert.Equal(t, c2, &Generic[float32]{Value: 2.0})
+
+	c1, c2 = mapper.Get(e3)
+	assert.Equal(t, c1, &Generic[int32]{Value: 3})
+	assert.Equal(t, c2, &Generic[float32]{Value: 4.0})
+
+	_, _, _ = e1, e2, e3
 }
