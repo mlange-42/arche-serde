@@ -20,6 +20,9 @@ const targetTag = "arche.relation.Target"
 //   - All resources
 //
 // All components and resources must be "JSON-able" with [encoding/json].
+//
+// The options can be used to skip some or all components,
+// entities entirely, and/or some or all resources.
 func Serialize(world *ecs.World, options ...Option) ([]byte, error) {
 	opts := newSerdeOptions(options...)
 

@@ -6,30 +6,41 @@ import (
 	"github.com/mlange-42/arche/generic"
 )
 
+// Opts is a helper to create Option instances.
 var Opts = Options{}
 
+// Option is an option. Modifies o.
+// Create them using [Opts].
 type Option func(o *serdeOptions)
 
+// Options is a helper to create Option instances.
+// Use it via the instance [Opts].
 type Options struct{}
 
+// SkipAllResources skips serialization or de-serialization of all resources.
 func (o Options) SkipAllResources() Option {
 	return func(o *serdeOptions) {
 		o.skipAllResources = true
 	}
 }
 
+// SkipAllComponents skips serialization or de-serialization of all components.
 func (o Options) SkipAllComponents() Option {
 	return func(o *serdeOptions) {
 		o.skipAllComponents = true
 	}
 }
 
+// SkipEntities skips serialization or de-serialization of all entities and components.
 func (o Options) SkipEntities() Option {
 	return func(o *serdeOptions) {
 		o.skipEntities = true
 	}
 }
 
+// SkipAllResources skips serialization or de-serialization of certain components.
+//
+// When deserializing, the skipped components must still be registered.
 func (o Options) SkipComponents(comps ...generic.Comp) Option {
 	return func(o *serdeOptions) {
 		o.skipComponents = make([]reflect.Type, len(comps))
@@ -39,6 +50,9 @@ func (o Options) SkipComponents(comps ...generic.Comp) Option {
 	}
 }
 
+// SkipAllResources skips serialization or de-serialization of certain resources.
+//
+// When deserializing, the skipped resources must still be registered.
 func (o Options) SkipResources(comps ...generic.Comp) Option {
 	return func(o *serdeOptions) {
 		o.skipResources = make([]reflect.Type, len(comps))

@@ -16,6 +16,11 @@ import (
 //   - All required component types must be registered using [ecs.ComponentID]
 //   - All required resources must be added as dummies using [ecs.AddResource]
 //
+// The options can be used to skip some or all components,
+// entities entirely, and/or some or all resources.
+// It only some components or resources are skipped,
+// they still need to be registered to the world.
+//
 // # Query iteration order
 //
 // After deserialization, it is not guaranteed that entity iteration order in queries is the same as before.
