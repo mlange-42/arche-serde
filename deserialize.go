@@ -96,6 +96,11 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 				Comp: component,
 			})
 		}
+
+		if len(components) == 0 {
+			continue
+		}
+
 		builder := ecs.NewBuilderWith(world, components...)
 		if target.IsZero() {
 			builder.Add(entity)
