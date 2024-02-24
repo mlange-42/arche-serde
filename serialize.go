@@ -30,7 +30,9 @@ func Serialize(world *ecs.World, options ...Option) ([]byte, error) {
 	if err := serializeWorld(world, &builder, &opts); err != nil {
 		return nil, err
 	}
-	builder.WriteString(",\n")
+	if !opts.skipEntities {
+		builder.WriteString(",\n")
+	}
 
 	serializeTypes(world, &builder, &opts)
 	builder.WriteString(",\n")
@@ -114,44 +116,47 @@ func serializeComponents(world *ecs.World, builder *strings.Builder, opts *serde
 	counter := 0
 	tempIDs := []ecs.ID{}
 	for query.Next() {
-		builder.WriteString("  {\n")
+		if opts.skipAllComponents {
+			builder.WriteString("  {")
+		} else {
+			builder.WriteString("  {\n")
 
-		ids := query.Ids()
-		last := len(ids) - 1
+			ids := query.Ids()
+			last := len(ids) - 1
 
-		tempIDs = tempIDs[:0]
-		for _, id := range ids {
-			if !skipComponents.Get(id) {
-				tempIDs = append(tempIDs, id)
+			tempIDs = tempIDs[:0]
+			for _, id := range ids {
+				if !skipComponents.Get(id) {
+					tempIDs = append(tempIDs, id)
+				}
 			}
-		}
 
-		for i, id := range tempIDs {
-			info, _ := ecs.ComponentInfo(world, id)
+			for i, id := range tempIDs {
+				info, _ := ecs.ComponentInfo(world, id)
 
-			if info.IsRelation {
-				target := query.Relation(id)
-				eJSON, err := target.MarshalJSON()
+				if info.IsRelation {
+					target := query.Relation(id)
+					eJSON, err := target.MarshalJSON()
+					if err != nil {
+						return err
+					}
+					builder.WriteString(fmt.Sprintf("    \"%s\" : %s,\n", targetTag, eJSON))
+				}
+
+				comp := query.Get(id)
+				value := reflect.NewAt(info.Type, comp).Interface()
+				jsonData, err := json.Marshal(value)
 				if err != nil {
 					return err
 				}
-				builder.WriteString(fmt.Sprintf("    \"%s\" : %s,\n", targetTag, eJSON))
+				builder.WriteString(fmt.Sprintf("    \"%s\" : ", info.Type.String()))
+				builder.WriteString(string(jsonData))
+				if i < last {
+					builder.WriteString(",")
+				}
+				builder.WriteString("\n")
 			}
-
-			comp := query.Get(id)
-			value := reflect.NewAt(info.Type, comp).Interface()
-			jsonData, err := json.Marshal(value)
-			if err != nil {
-				return err
-			}
-			builder.WriteString(fmt.Sprintf("    \"%s\" : ", info.Type.String()))
-			builder.WriteString(string(jsonData))
-			if i < last {
-				builder.WriteString(",")
-			}
-			builder.WriteString("\n")
 		}
-
 		builder.WriteString("  }")
 		if counter < lastEntity {
 			builder.WriteString(",")

@@ -46,6 +46,7 @@ func serialize(opts ...archeserde.Option) ([]byte, ecs.Entity, ecs.Entity, error
 		ecs.Component{ID: velId, Comp: &Velocity{X: 5, Y: 6}},
 		ecs.Component{ID: childId, Comp: &ChildOf{Entity: parent}},
 	)
+	w.NewEntity()
 
 	resId := ecs.ResourceID[Velocity](&w)
 	resId2 := ecs.ResourceID[Position](&w)
@@ -58,6 +59,82 @@ func serialize(opts ...archeserde.Option) ([]byte, ecs.Entity, ecs.Entity, error
 
 func TestSerialize(t *testing.T) {
 	jsonData, parent, child, err := serialize()
+
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	w := ecs.NewWorld()
+	posId := ecs.ComponentID[Position](&w)
+	velId := ecs.ComponentID[Velocity](&w)
+	childId := ecs.ComponentID[ChildOf](&w)
+	_ = ecs.AddResource[Position](&w, &Position{})
+	_ = ecs.AddResource[Velocity](&w, &Velocity{})
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+
+	query := w.Query(ecs.All())
+
+	assert.Equal(t, query.Count(), 3)
+
+	query.Next()
+	assert.False(t, query.Has(posId))
+	assert.False(t, query.Has(velId))
+
+	query.Next()
+	assert.True(t, query.Has(posId))
+	assert.False(t, query.Has(velId))
+	assert.Equal(t, *(*Position)(query.Get(posId)), Position{X: 1, Y: 2})
+
+	query.Next()
+	assert.True(t, query.Has(posId))
+	assert.True(t, query.Has(velId))
+	assert.Equal(t, *(*Position)(query.Get(posId)), Position{X: 3, Y: 4})
+	assert.Equal(t, *(*Velocity)(query.Get(velId)), Velocity{X: 5, Y: 6})
+	assert.Equal(t, *(*ChildOf)(query.Get(childId)), ChildOf{Entity: parent})
+
+	res := (*Velocity)(ecs.GetResource[Velocity](&w))
+
+	assert.Equal(t, *res, Velocity{X: 1000})
+
+	assert.True(t, w.Alive(parent))
+	assert.True(t, w.Alive(child))
+}
+
+func TestSerializeSkipEntities(t *testing.T) {
+	jsonData, _, _, err := serialize(archeserde.Opts.SkipEntities())
+
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	w := ecs.NewWorld()
+	_ = ecs.AddResource[Position](&w, &Position{})
+	_ = ecs.AddResource[Velocity](&w, &Velocity{})
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+
+	query := w.Query(ecs.All())
+
+	assert.Equal(t, query.Count(), 0)
+	query.Close()
+
+	res := (*Velocity)(ecs.GetResource[Velocity](&w))
+	assert.Equal(t, *res, Velocity{X: 1000})
+}
+
+func TestSerializeSkipAllComponents(t *testing.T) {
+	jsonData, parent, child, err := serialize(archeserde.Opts.SkipAllComponents())
 
 	if err != nil {
 		assert.Fail(t, "could not serialize: %s\n", err)
