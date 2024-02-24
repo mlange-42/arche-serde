@@ -143,7 +143,37 @@ func TestSerializeSkipAllComponents(t *testing.T) {
 	fmt.Println(string(jsonData))
 
 	w := ecs.NewWorld()
-	posId := ecs.ComponentID[Position](&w)
+	_ = ecs.AddResource[Position](&w, &Position{})
+	_ = ecs.AddResource[Velocity](&w, &Velocity{})
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+
+	query := w.Query(ecs.All())
+
+	assert.Equal(t, query.Count(), 3)
+	query.Close()
+
+	res := (*Velocity)(ecs.GetResource[Velocity](&w))
+
+	assert.Equal(t, *res, Velocity{X: 1000})
+
+	assert.True(t, w.Alive(parent))
+	assert.True(t, w.Alive(child))
+}
+
+func TestSerializeSkipComponents(t *testing.T) {
+	jsonData, parent, child, err := serialize(archeserde.Opts.SkipComponents(generic.T[Position]()))
+
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	w := ecs.NewWorld()
 	velId := ecs.ComponentID[Velocity](&w)
 	childId := ecs.ComponentID[ChildOf](&w)
 	_ = ecs.AddResource[Position](&w, &Position{})
@@ -156,17 +186,16 @@ func TestSerializeSkipAllComponents(t *testing.T) {
 
 	query := w.Query(ecs.All())
 
-	assert.Equal(t, query.Count(), 2)
+	assert.Equal(t, query.Count(), 3)
 
 	query.Next()
-	assert.True(t, query.Has(posId))
 	assert.False(t, query.Has(velId))
-	assert.Equal(t, *(*Position)(query.Get(posId)), Position{X: 1, Y: 2})
 
 	query.Next()
-	assert.True(t, query.Has(posId))
+	assert.False(t, query.Has(velId))
+
+	query.Next()
 	assert.True(t, query.Has(velId))
-	assert.Equal(t, *(*Position)(query.Get(posId)), Position{X: 3, Y: 4})
 	assert.Equal(t, *(*Velocity)(query.Get(velId)), Velocity{X: 5, Y: 6})
 	assert.Equal(t, *(*ChildOf)(query.Get(childId)), ChildOf{Entity: parent})
 
@@ -176,6 +205,51 @@ func TestSerializeSkipAllComponents(t *testing.T) {
 
 	assert.True(t, w.Alive(parent))
 	assert.True(t, w.Alive(child))
+}
+
+func TestSerializeSkipAllResources(t *testing.T) {
+	jsonData, _, _, err := serialize(archeserde.Opts.SkipAllResources())
+
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	w := ecs.NewWorld()
+	_ = ecs.ComponentID[Position](&w)
+	_ = ecs.ComponentID[Velocity](&w)
+	_ = ecs.ComponentID[ChildOf](&w)
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+}
+
+func TestSerializeSkipResources(t *testing.T) {
+	jsonData, _, _, err := serialize(archeserde.Opts.SkipResources(generic.T[Position]()))
+
+	if err != nil {
+		assert.Fail(t, "could not serialize: %s\n", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	w := ecs.NewWorld()
+	_ = ecs.ComponentID[Position](&w)
+	_ = ecs.ComponentID[Velocity](&w)
+	_ = ecs.ComponentID[ChildOf](&w)
+	_ = ecs.AddResource[Velocity](&w, &Velocity{})
+
+	err = archeserde.Deserialize(jsonData, &w)
+	if err != nil {
+		assert.Fail(t, "could not deserialize: %s\n", err)
+	}
+
+	res := (*Velocity)(ecs.GetResource[Velocity](&w))
+
+	assert.Equal(t, *res, Velocity{X: 1000})
 }
 
 func TestSerializeRelation(t *testing.T) {

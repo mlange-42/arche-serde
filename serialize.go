@@ -122,7 +122,6 @@ func serializeComponents(world *ecs.World, builder *strings.Builder, opts *serde
 			builder.WriteString("  {\n")
 
 			ids := query.Ids()
-			last := len(ids) - 1
 
 			tempIDs = tempIDs[:0]
 			for _, id := range ids {
@@ -130,6 +129,7 @@ func serializeComponents(world *ecs.World, builder *strings.Builder, opts *serde
 					tempIDs = append(tempIDs, id)
 				}
 			}
+			last := len(tempIDs) - 1
 
 			for i, id := range tempIDs {
 				info, _ := ecs.ComponentInfo(world, id)
