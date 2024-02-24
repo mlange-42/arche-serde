@@ -21,6 +21,7 @@
 
 * Serialize/deserialize an entire *Arche* world in one line.
 * Proper serialization of entity relations, as well as of entities stored in components.
+* Skip arbitrary components and resources when serializing or deserializing.
 
 ## Installation
 
