@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/mlange-42/arche/ecs"
 )
@@ -21,25 +22,33 @@ import (
 // More precisely, it should at first be the same as before, but will likely deviate over time from what would
 // happen when continuing the original, serialized run. Multiple worlds deserialized from the same source should,
 // however, behave exactly the same.
-func Deserialize(jsonData []byte, world *ecs.World) error {
+func Deserialize(jsonData []byte, world *ecs.World, options ...Option) error {
+	opts := newSerdeOptions(options...)
+
 	deserial := deserializer{}
 	if err := json.Unmarshal(jsonData, &deserial); err != nil {
 		return err
 	}
 
-	world.LoadEntities(&deserial.World)
+	if !opts.skipEntities {
+		world.LoadEntities(&deserial.World)
+	}
 
-	if err := deserializeComponents(world, &deserial); err != nil {
+	if err := deserializeComponents(world, &deserial, &opts); err != nil {
 		return err
 	}
-	if err := deserializeResources(world, &deserial); err != nil {
+	if err := deserializeResources(world, &deserial, &opts); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func deserializeComponents(world *ecs.World, deserial *deserializer) error {
+func deserializeComponents(world *ecs.World, deserial *deserializer, opts *serdeOptions) error {
+	if opts.skipEntities {
+		return nil
+	}
+
 	infos := map[ecs.ID]ecs.CompInfo{}
 	ids := map[string]ecs.ID{}
 	allComps := ecs.ComponentIDs(world)
@@ -60,6 +69,12 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 		return fmt.Errorf("found components for %d entities, but world has %d alive entities", len(deserial.Components), len(deserial.World.Alive))
 	}
 
+	skipComponents := ecs.Mask{}
+	for _, tp := range opts.skipComponents {
+		id := ecs.TypeID(world, tp)
+		skipComponents.Set(id, true)
+	}
+
 	for i, comps := range deserial.Components {
 		entity := deserial.World.Entities[deserial.World.Alive[i]]
 
@@ -71,6 +86,7 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 
 		target := ecs.Entity{}
 		var targetComp ecs.ID
+		hasRelation := false
 		components := []ecs.Component{}
 		for tpName, value := range mp {
 			if tpName == targetTag {
@@ -81,10 +97,15 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 			}
 
 			id := ids[tpName]
+			if skipComponents.Get(id) {
+				continue
+			}
+
 			info := infos[id]
 
 			if info.IsRelation {
 				targetComp = id
+				hasRelation = true
 			}
 
 			component := reflect.New(info.Type).Interface()
@@ -101,6 +122,10 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 			continue
 		}
 
+		if !hasRelation {
+			target = ecs.Entity{}
+		}
+
 		builder := ecs.NewBuilderWith(world, components...)
 		if target.IsZero() {
 			builder.Add(entity)
@@ -112,14 +137,23 @@ func deserializeComponents(world *ecs.World, deserial *deserializer) error {
 	return nil
 }
 
-func deserializeResources(world *ecs.World, deserial *deserializer) error {
+func deserializeResources(world *ecs.World, deserial *deserializer, opts *serdeOptions) error {
+	if opts.skipAllResources {
+		return nil
+	}
+
 	resTypes := map[ecs.ResID]reflect.Type{}
 	resIds := map[string]ecs.ResID{}
 	allRes := ecs.ResourceIDs(world)
+	skipResources := ecs.Mask{}
 	for _, id := range allRes {
 		if tp, ok := ecs.ResourceType(world, id); ok {
 			resTypes[id] = tp
 			resIds[tp.String()] = id
+
+			if slices.Contains(opts.skipResources, tp) {
+				skipResources.Set(ecs.ID(id), true)
+			}
 		}
 	}
 
@@ -128,6 +162,10 @@ func deserializeResources(world *ecs.World, deserial *deserializer) error {
 		if !ok {
 			return fmt.Errorf("resource type is not registered: %s", tpName)
 		}
+		if skipResources.Get(ecs.ID(resID)) {
+			continue
+		}
+
 		tp := resTypes[resID]
 
 		resLoc := world.Resources().Get(resID)

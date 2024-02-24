@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/mlange-42/arche/ecs"
@@ -19,25 +20,27 @@ const targetTag = "arche.relation.Target"
 //   - All resources
 //
 // All components and resources must be "JSON-able" with [encoding/json].
-func Serialize(world *ecs.World) ([]byte, error) {
+func Serialize(world *ecs.World, options ...Option) ([]byte, error) {
+	opts := newSerdeOptions(options...)
+
 	builder := strings.Builder{}
 
 	builder.WriteString("{\n")
 
-	if err := serializeWorld(world, &builder); err != nil {
+	if err := serializeWorld(world, &builder, &opts); err != nil {
 		return nil, err
 	}
 	builder.WriteString(",\n")
 
-	serializeTypes(world, &builder)
+	serializeTypes(world, &builder, &opts)
 	builder.WriteString(",\n")
 
-	if err := serializeComponents(world, &builder); err != nil {
+	if err := serializeComponents(world, &builder, &opts); err != nil {
 		return nil, err
 	}
 	builder.WriteString(",\n")
 
-	if err := serializeResources(world, &builder); err != nil {
+	if err := serializeResources(world, &builder, &opts); err != nil {
 		return nil, err
 	}
 	builder.WriteString("}\n")
@@ -45,7 +48,11 @@ func Serialize(world *ecs.World) ([]byte, error) {
 	return []byte(builder.String()), nil
 }
 
-func serializeWorld(world *ecs.World, builder *strings.Builder) error {
+func serializeWorld(world *ecs.World, builder *strings.Builder, opts *serdeOptions) error {
+	if opts.skipEntities {
+		return nil
+	}
+
 	entities := world.DumpEntities()
 
 	jsonData, err := json.Marshal(entities)
@@ -56,7 +63,12 @@ func serializeWorld(world *ecs.World, builder *strings.Builder) error {
 	return nil
 }
 
-func serializeTypes(world *ecs.World, builder *strings.Builder) {
+func serializeTypes(world *ecs.World, builder *strings.Builder, opts *serdeOptions) {
+	if opts.skipEntities || opts.skipAllComponents {
+		builder.WriteString("\"Types\" : []")
+		return
+	}
+
 	builder.WriteString("\"Types\" : [\n")
 
 	types := map[ecs.ID]reflect.Type{}
@@ -64,7 +76,9 @@ func serializeTypes(world *ecs.World, builder *strings.Builder) {
 	allComps := ecs.ComponentIDs(world)
 	for _, id := range allComps {
 		if info, ok := ecs.ComponentInfo(world, id); ok {
-			types[id] = info.Type
+			if !slices.Contains(opts.skipComponents, info.Type) {
+				types[id] = info.Type
+			}
 		}
 	}
 	maxComp := len(types) - 1
@@ -81,20 +95,38 @@ func serializeTypes(world *ecs.World, builder *strings.Builder) {
 	builder.WriteString("]")
 }
 
-func serializeComponents(world *ecs.World, builder *strings.Builder) error {
+func serializeComponents(world *ecs.World, builder *strings.Builder, opts *serdeOptions) error {
+	if opts.skipEntities {
+		builder.WriteString("\"Components\" : []")
+		return nil
+	}
+
+	skipComponents := ecs.Mask{}
+	for _, tp := range opts.skipComponents {
+		id := ecs.TypeID(world, tp)
+		skipComponents.Set(id, true)
+	}
 
 	builder.WriteString("\"Components\" : [\n")
 
 	query := world.Query(ecs.All())
 	lastEntity := query.Count() - 1
 	counter := 0
+	tempIDs := []ecs.ID{}
 	for query.Next() {
 		builder.WriteString("  {\n")
 
 		ids := query.Ids()
 		last := len(ids) - 1
 
-		for i, id := range ids {
+		tempIDs = tempIDs[:0]
+		for _, id := range ids {
+			if !skipComponents.Get(id) {
+				tempIDs = append(tempIDs, id)
+			}
+		}
+
+		for i, id := range tempIDs {
 			info, _ := ecs.ComponentInfo(world, id)
 
 			if info.IsRelation {
@@ -133,14 +165,21 @@ func serializeComponents(world *ecs.World, builder *strings.Builder) error {
 	return nil
 }
 
-func serializeResources(world *ecs.World, builder *strings.Builder) error {
+func serializeResources(world *ecs.World, builder *strings.Builder, opts *serdeOptions) error {
+	if opts.skipAllResources {
+		builder.WriteString("\"Resources\" : {}")
+		return nil
+	}
+
 	builder.WriteString("\"Resources\" : {\n")
 
 	resTypes := map[ecs.ResID]reflect.Type{}
 	allRes := ecs.ResourceIDs(world)
 	for _, id := range allRes {
 		if tp, ok := ecs.ResourceType(world, id); ok {
-			resTypes[id] = tp
+			if !slices.Contains(opts.skipResources, tp) {
+				resTypes[id] = tp
+			}
 		}
 	}
 
