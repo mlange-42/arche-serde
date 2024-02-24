@@ -33,7 +33,7 @@ type Generic[T any] struct {
 	Value T
 }
 
-func TestSerialize(t *testing.T) {
+func serialize(opts ...archeserde.Option) ([]byte, ecs.Entity, ecs.Entity, error) {
 	w := ecs.NewWorld()
 
 	posId := ecs.ComponentID[Position](&w)
@@ -52,7 +52,12 @@ func TestSerialize(t *testing.T) {
 	w.Resources().Add(resId, &Velocity{X: 1000, Y: 0})
 	w.Resources().Add(resId2, &Position{X: 1000, Y: 0})
 
-	jsonData, err := archeserde.Serialize(&w)
+	js, err := archeserde.Serialize(&w, opts...)
+	return js, parent, child, err
+}
+
+func TestSerialize(t *testing.T) {
+	jsonData, parent, child, err := serialize()
 
 	if err != nil {
 		assert.Fail(t, "could not serialize: %s\n", err)
@@ -60,10 +65,10 @@ func TestSerialize(t *testing.T) {
 
 	fmt.Println(string(jsonData))
 
-	w = ecs.NewWorld()
-	posId = ecs.ComponentID[Position](&w)
-	velId = ecs.ComponentID[Velocity](&w)
-	childId = ecs.ComponentID[ChildOf](&w)
+	w := ecs.NewWorld()
+	posId := ecs.ComponentID[Position](&w)
+	velId := ecs.ComponentID[Velocity](&w)
+	childId := ecs.ComponentID[ChildOf](&w)
 	_ = ecs.AddResource[Position](&w, &Position{})
 	_ = ecs.AddResource[Velocity](&w, &Velocity{})
 
