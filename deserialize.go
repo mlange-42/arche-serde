@@ -92,7 +92,8 @@ func deserializeComponents(world *ecs.World, deserial *deserializer, opts *serde
 		target := ecs.Entity{}
 		var targetComp ecs.ID
 		hasRelation := false
-		components := []ecs.Component{}
+		components := make([]ecs.Component, 0, len(mp))
+		compIDs := make([]ecs.ID, 0, len(mp))
 		for tpName, value := range mp {
 			if tpName == targetTag {
 				if err := json.Unmarshal(value.Bytes, &target); err != nil {
@@ -117,6 +118,7 @@ func deserializeComponents(world *ecs.World, deserial *deserializer, opts *serde
 			if err := json.Unmarshal(value.Bytes, &component); err != nil {
 				return err
 			}
+			compIDs = append(compIDs, id)
 			components = append(components, ecs.Component{
 				ID:   id,
 				Comp: component,
@@ -131,15 +133,24 @@ func deserializeComponents(world *ecs.World, deserial *deserializer, opts *serde
 			target = ecs.Entity{}
 		}
 
-		builder := ecs.NewBuilderWith(world, components...)
-		if target.IsZero() {
-			builder.Add(entity)
-		} else {
-			builder = builder.WithRelation(targetComp)
-			builder.Add(entity, target)
+		world.Add(entity, compIDs...)
+		for _, comp := range components {
+			assign(world, entity, comp.ID, comp.Comp)
+		}
+		if !target.IsZero() {
+			world.Relations().Set(entity, targetComp, target)
 		}
 	}
 	return nil
+}
+
+func assign(world *ecs.World, entity ecs.Entity, id ecs.ID, comp interface{}) {
+	dst := world.Get(entity, id)
+	rValue := reflect.ValueOf(comp).Elem()
+
+	valueType := rValue.Type()
+	valuePtr := reflect.NewAt(valueType, dst)
+	valuePtr.Elem().Set(rValue)
 }
 
 func deserializeResources(world *ecs.World, deserial *deserializer, opts *serdeOptions) error {
