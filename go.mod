@@ -5,8 +5,8 @@ go 1.21
 toolchain go1.21.3
 
 require (
-	github.com/mlange-42/arche v0.11.0
-	github.com/stretchr/testify v1.8.2
+	github.com/mlange-42/arche v0.13.4-0.20241222152816-30c1f4bc4858
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
