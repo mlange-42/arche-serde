@@ -40,12 +40,14 @@ func serialize(opts ...archeserde.Option) ([]byte, ecs.Entity, ecs.Entity, error
 	velId := ecs.ComponentID[Velocity](&w)
 	childId := ecs.ComponentID[ChildOf](&w)
 
-	parent := w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
-	child := w.NewEntityWith(
-		ecs.Component{ID: posId, Comp: &Position{X: 3, Y: 4}},
-		ecs.Component{ID: velId, Comp: &Velocity{X: 5, Y: 6}},
-		ecs.Component{ID: childId, Comp: &ChildOf{Entity: parent}},
-	)
+	parent := w.NewEntity(posId)
+	*(*Position)(w.Get(parent, posId)) = Position{X: 1, Y: 2}
+
+	child := w.NewEntity(posId, velId, childId)
+	*(*Position)(w.Get(child, posId)) = Position{X: 3, Y: 4}
+	*(*Velocity)(w.Get(child, velId)) = Velocity{X: 5, Y: 6}
+	*(*ChildOf)(w.Get(child, childId)) = ChildOf{Entity: parent}
+
 	w.NewEntity()
 
 	resId := ecs.ResourceID[Velocity](&w)
@@ -258,15 +260,16 @@ func TestSerializeRelation(t *testing.T) {
 	posId := ecs.ComponentID[Position](&w)
 	relId := ecs.ComponentID[ChildRelation](&w)
 
-	parent := w.NewEntityWith(ecs.Component{ID: posId, Comp: &Position{X: 1, Y: 2}})
-	child1 := w.NewEntityWith(
-		ecs.Component{ID: posId, Comp: &Position{X: 3, Y: 4}},
-		ecs.Component{ID: relId, Comp: &ChildRelation{}},
-	)
-	child2 := w.NewEntityWith(
-		ecs.Component{ID: posId, Comp: &Position{X: 5, Y: 6}},
-		ecs.Component{ID: relId, Comp: &ChildRelation{}},
-	)
+	parent := w.NewEntity(posId)
+	*(*Position)(w.Get(parent, posId)) = Position{X: 1, Y: 2}
+
+	child1 := w.NewEntity(posId, relId)
+	*(*Position)(w.Get(child1, posId)) = Position{X: 3, Y: 4}
+	*(*ChildRelation)(w.Get(child1, relId)) = ChildRelation{}
+
+	child2 := w.NewEntity(posId, relId)
+	*(*Position)(w.Get(child2, posId)) = Position{X: 5, Y: 6}
+	*(*ChildRelation)(w.Get(child2, relId)) = ChildRelation{}
 
 	w.Relations().Set(child2, relId, parent)
 
@@ -295,16 +298,15 @@ func TestSerializeGeneric(t *testing.T) {
 	gen1Id := ecs.ComponentID[Generic[int32]](&w)
 	gen2Id := ecs.ComponentID[Generic[float32]](&w)
 
-	e1 := w.NewEntityWith(
-		ecs.Component{ID: gen1Id, Comp: &Generic[int32]{Value: 1}},
-	)
-	e2 := w.NewEntityWith(
-		ecs.Component{ID: gen2Id, Comp: &Generic[float32]{Value: 2.0}},
-	)
-	e3 := w.NewEntityWith(
-		ecs.Component{ID: gen1Id, Comp: &Generic[int32]{Value: 3}},
-		ecs.Component{ID: gen2Id, Comp: &Generic[float32]{Value: 4.0}},
-	)
+	e1 := w.NewEntity(gen1Id)
+	*(*Generic[int32])(w.Get(e1, gen1Id)) = Generic[int32]{Value: 1}
+
+	e2 := w.NewEntity(gen2Id)
+	*(*Generic[float32])(w.Get(e2, gen2Id)) = Generic[float32]{Value: 2.0}
+
+	e3 := w.NewEntity(gen1Id, gen2Id)
+	*(*Generic[int32])(w.Get(e3, gen1Id)) = Generic[int32]{Value: 3}
+	*(*Generic[float32])(w.Get(e3, gen2Id)) = Generic[float32]{Value: 4.0}
 
 	jsonData, err := archeserde.Serialize(&w)
 	if err != nil {
